@@ -15,7 +15,7 @@ const (
 	FPS            = 30
 	FRAME_DURATION = time.Second / FPS
 	FRAME_PATH     = "frames/"
-	AUDIO_PATH     = "audio.mp3"
+	AUDIO_PATH     = "bad-apple.mp3"
 )
 
 func main() {
@@ -31,6 +31,11 @@ func main() {
 		log.Fatalln("error while counting frame: ", err)
 	}
 
+	// start the audio
+	done := make(chan bool)
+	go badapple.PlayAudio(AUDIO_PATH, done)
+
+	// start the frame
 	frameCount := len(fc)
 	for i := 0; i < frameCount; i++ {
 		// get the frame path
@@ -45,10 +50,13 @@ func main() {
 		// scale the frame
 		frame = scaleFrame(frame, width, height)
 
+		// render the frame
 		renderFrame(frame)
 
 		time.Sleep(FRAME_DURATION)
 	}
+
+	<-done
 }
 
 func scaleFrame(frame [][]uint8, targetWidth, targetHeight int) [][]uint8 {
@@ -85,14 +93,15 @@ func scaleFrame(frame [][]uint8, targetWidth, targetHeight int) [][]uint8 {
 }
 
 func renderFrame(frame [][]uint8) {
-	os.Stdout.Write([]byte("\033[H"))
+	// clear the screen and move the cursor to the top left
+	fmt.Print("\033[H\033[2J")
 
 	for _, row := range frame {
 		for _, pixel := range row {
 			if pixel == 0 {
-				fmt.Print(" ")
-			} else {
 				fmt.Print("█")
+			} else {
+				fmt.Print(" ")
 			}
 		}
 
