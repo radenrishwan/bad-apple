@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sort"
+	"strconv"
+	"strings"
 	"time"
 
 	"golang.org/x/term"
@@ -28,6 +31,23 @@ func RunCLI(fps int, framePath, audioPath string) {
 	done := make(chan bool)
 	go PlayAudio(audioPath, done)
 
+	// sorting the frames
+	sort.Slice(fc, func(i, j int) bool {
+		// sort by frame number
+		// e.g. frame_1.png, frame_2.png, frame_3.png, ...
+		a := strings.Split(fc[i].Name(), "_")
+		b := strings.Split(fc[j].Name(), "_")
+
+		// remove the .png
+		a = strings.Split(a[1], ".")
+		b = strings.Split(b[1], ".")
+
+		numA, _ := strconv.Atoi(a[0])
+		numB, _ := strconv.Atoi(b[0])
+
+		return numA < numB
+	})
+
 	// start the frame
 	frameCount := len(fc)
 	for i := 0; i < frameCount; i++ {
@@ -46,6 +66,7 @@ func RunCLI(fps int, framePath, audioPath string) {
 
 		// render the frame
 		renderFrame(frame)
+		// fmt.Println("rendering ", framePath)
 
 		processTime := time.Since(cycleStart)
 		if processTime < time.Duration(FRAME_DURATION) {
@@ -91,17 +112,17 @@ func scaleFrame(frame [][]uint8, targetWidth, targetHeight int) [][]uint8 {
 
 func renderFrame(frame [][]uint8) {
 	// clear the screen and move the cursor to the top left
-	fmt.Print("\033[H\033[2J")
+	os.Stdout.Write([]byte("\033[H\033[2J"))
 
 	for _, row := range frame {
 		for _, pixel := range row {
 			if pixel == 0 {
-				fmt.Print(" ")
+				os.Stdout.Write([]byte(" "))
 			} else {
-				fmt.Print("█")
+				os.Stdout.Write([]byte("█"))
 			}
 		}
 
-		fmt.Println()
+		os.Stdout.Write([]byte("\n"))
 	}
 }
