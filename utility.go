@@ -26,31 +26,40 @@ func ProcessFrame(path string) ([][]uint8, error) {
 	bounds := img.Bounds()
 	width, height := bounds.Max.X, bounds.Max.Y
 
-	binaryArray := make([][]uint8, height)
+	grayArray := make([][]uint8, height)
 	for y := 0; y < height; y++ {
-		binaryArray[y] = make([]uint8, width)
+		grayArray[y] = make([]uint8, width)
 		for x := 0; x < width; x++ {
 			// get the pixel color
 			pixel := color.GrayModel.Convert(img.At(x, y)).(color.Gray)
 
-			// applying threshold
-			var value uint8
-			if pixel.Y < 128 {
-				value = 0
-			} else {
-				value = 1
+			// convert to 5 levels (0-4)
+			switch {
+			case pixel.Y < 51:
+				grayArray[y][x] = 0
+			case pixel.Y < 102:
+				grayArray[y][x] = 1
+			case pixel.Y < 153:
+				grayArray[y][x] = 2
+			case pixel.Y < 204:
+				grayArray[y][x] = 3
+			default:
+				grayArray[y][x] = 4
 			}
-			binaryArray[y][x] = value
 		}
 	}
 
-	return binaryArray, nil
+	return grayArray, nil
 }
 
 func LoadFrame(path string, targetHeight, targetWidth int) ([][]uint8, error) {
 	frame, err := ProcessFrame(path)
 	if err != nil {
 		return nil, err
+	}
+
+	if targetWidth == 0 && targetHeight == 0 {
+		return frame, nil
 	}
 
 	// get original size

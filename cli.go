@@ -18,10 +18,35 @@ func RunCLI(fps int, framePath, audioPath string) {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	if err := screen.Init(); err != nil {
 		log.Fatal(err)
 	}
 	defer screen.Fini()
+
+	events := make(chan tcell.Event)
+	go func() {
+		for {
+			ev := screen.PollEvent()
+			events <- ev
+		}
+	}()
+
+	go func() {
+		for {
+			ev := <-events
+
+			// close the program if the user press CTRL + C or ESC
+			switch evt := ev.(type) {
+			case *tcell.EventKey:
+				if evt.Key() == tcell.KeyCtrlC || evt.Key() == tcell.KeyEscape {
+					screen.Fini()
+					os.Exit(0)
+				}
+			}
+		}
+
+	}()
 
 	// get terminal size
 	// width, height, err := term.GetSize(int(os.Stdout.Fd()))
@@ -41,8 +66,6 @@ func RunCLI(fps int, framePath, audioPath string) {
 
 	// sorting the frames
 	sort.Slice(fc, func(i, j int) bool {
-		// sort by frame number
-		// e.g. frame_1.png, frame_2.png, frame_3.png, ...
 		a := strings.Split(fc[i].Name(), "_")
 		b := strings.Split(fc[j].Name(), "_")
 
@@ -61,7 +84,7 @@ func RunCLI(fps int, framePath, audioPath string) {
 	for i := 0; i < frameCount; i++ {
 		cycleStart := time.Now()
 
-		frame, err := LoadFrame(framePath+fc[i].Name(), 64, 64)
+		frame, err := LoadFrame(framePath+fc[i].Name(), 32, 32)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -83,13 +106,15 @@ func RunCLI(fps int, framePath, audioPath string) {
 }
 
 func renderFrameTcell(frame [][]uint8, screen tcell.Screen) {
+	// chars := []rune{' ', '░', '▒', '▓', '█'}
+
+	// alternate characters
+	chars := []rune{' ', '.', 'o', 'O', '0'}
+
 	for y, row := range frame {
 		for x, pixel := range row {
 			style := tcell.StyleDefault
-			char := ' '
-			if pixel > 0 {
-				char = '█'
-			}
+			char := chars[pixel]
 
 			screen.SetContent(x, y, char, nil, style)
 		}
