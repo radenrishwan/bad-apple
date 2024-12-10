@@ -1,7 +1,6 @@
 package badapple
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"sort"
@@ -9,17 +8,26 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/term"
+	"github.com/gdamore/tcell/v2"
 )
 
 func RunCLI(fps int, framePath, audioPath string) {
 	FRAME_DURATION := int(time.Second) / fps
 
-	// get terminal size
-	width, height, err := term.GetSize(int(os.Stdout.Fd()))
+	screen, err := tcell.NewScreen()
 	if err != nil {
-		log.Fatalln("error getting terminal size:", err)
+		log.Fatal(err)
 	}
+	if err := screen.Init(); err != nil {
+		log.Fatal(err)
+	}
+	defer screen.Fini()
+
+	// get terminal size
+	// width, height, err := term.GetSize(int(os.Stdout.Fd()))
+	// if err != nil {
+	// 	log.Fatalln("error getting terminal size:", err)
+	// }
 
 	// count the frames
 	fc, err := os.ReadDir(framePath)
@@ -53,20 +61,17 @@ func RunCLI(fps int, framePath, audioPath string) {
 	for i := 0; i < frameCount; i++ {
 		cycleStart := time.Now()
 
-		// get the frame path
-		framePath := fmt.Sprintf("%s%s", framePath, fc[i].Name())
-
-		frame, err := ProcessFrame(framePath)
+		frame, err := LoadFrame(framePath+fc[i].Name(), 64, 64)
 		if err != nil {
-			log.Fatalln(err)
+			log.Fatal(err)
 		}
 
-		// scale the frame
+		width, height := screen.Size()
 		frame = scaleFrame(frame, width, height)
 
-		// render the frame
-		renderFrame(frame)
-		// fmt.Println("rendering ", framePath)
+		screen.Clear()
+		renderFrameTcell(frame, screen)
+		screen.Show()
 
 		processTime := time.Since(cycleStart)
 		if processTime < time.Duration(FRAME_DURATION) {
@@ -75,6 +80,20 @@ func RunCLI(fps int, framePath, audioPath string) {
 	}
 
 	<-done
+}
+
+func renderFrameTcell(frame [][]uint8, screen tcell.Screen) {
+	for y, row := range frame {
+		for x, pixel := range row {
+			style := tcell.StyleDefault
+			char := ' '
+			if pixel > 0 {
+				char = '█'
+			}
+
+			screen.SetContent(x, y, char, nil, style)
+		}
+	}
 }
 
 func scaleFrame(frame [][]uint8, targetWidth, targetHeight int) [][]uint8 {
@@ -125,4 +144,34 @@ func renderFrame(frame [][]uint8) {
 
 		os.Stdout.Write([]byte("\n"))
 	}
+}
+
+func LoadFrame(path string, targetHeight, targetWidth int) ([][]uint8, error) {
+	frame, err := ProcessFrame(path)
+	if err != nil {
+		return nil, err
+	}
+
+	// get original size
+	originalHeight := len(frame)
+	originalWidth := len(frame[0])
+
+	// create a new array for the resized frame
+	resized := make([][]uint8, targetHeight)
+	for i := range resized {
+		resized[i] = make([]uint8, targetWidth)
+	}
+
+	// resize using nearest neighbor scaling
+	for y := 0; y < targetHeight; y++ {
+		for x := 0; x < targetWidth; x++ {
+			// calculate corresponding position in original image
+			sourceY := y * originalHeight / targetHeight
+			sourceX := x * originalWidth / targetWidth
+
+			resized[y][x] = frame[sourceY][sourceX]
+		}
+	}
+
+	return resized, nil
 }

@@ -33,7 +33,7 @@ func ProcessFrame(path string) ([][]uint8, error) {
 			// get the pixel color
 			pixel := color.GrayModel.Convert(img.At(x, y)).(color.Gray)
 
-			// applyi threshold
+			// applying threshold
 			var value uint8
 			if pixel.Y < 128 {
 				value = 0
