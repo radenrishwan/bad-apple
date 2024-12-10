@@ -47,6 +47,36 @@ func ProcessFrame(path string) ([][]uint8, error) {
 	return binaryArray, nil
 }
 
+func LoadFrame(path string, targetHeight, targetWidth int) ([][]uint8, error) {
+	frame, err := ProcessFrame(path)
+	if err != nil {
+		return nil, err
+	}
+
+	// get original size
+	originalHeight := len(frame)
+	originalWidth := len(frame[0])
+
+	// create a new array for the resized frame
+	resized := make([][]uint8, targetHeight)
+	for i := range resized {
+		resized[i] = make([]uint8, targetWidth)
+	}
+
+	// resize using nearest neighbor scaling
+	for y := 0; y < targetHeight; y++ {
+		for x := 0; x < targetWidth; x++ {
+			// calculate corresponding position in original image
+			sourceY := y * originalHeight / targetHeight
+			sourceX := x * originalWidth / targetWidth
+
+			resized[y][x] = frame[sourceY][sourceX]
+		}
+	}
+
+	return resized, nil
+}
+
 func PlayAudio(path string, done <-chan bool) error {
 	audio, err := os.Open(path)
 	defer audio.Close()
