@@ -7,9 +7,12 @@ import (
 	"os"
 	"time"
 
+	"github.com/faiface/beep/effects"
 	"github.com/faiface/beep/mp3"
 	"github.com/faiface/beep/speaker"
 )
+
+var VOLUME_LEVEL = -2.0
 
 func ProcessFrame(path string) ([][]uint8, error) {
 	file, err := os.Open(path)
@@ -33,7 +36,7 @@ func ProcessFrame(path string) ([][]uint8, error) {
 			// get the pixel color
 			pixel := color.GrayModel.Convert(img.At(x, y)).(color.Gray)
 
-			// convert to 5 levels (0-4)
+			// convert to 10 levels (0-9)
 			switch {
 			case pixel.Y < 51:
 				grayArray[y][x] = 0
@@ -100,7 +103,14 @@ func PlayAudio(path string, done <-chan bool) error {
 		return errors.New("Error while initializing speaker :" + err.Error())
 	}
 
-	speaker.Play(streamer)
+	// Create volume controller with the flag value
+	volumeStreamer := &effects.Volume{
+		Streamer: streamer,
+		Volume:   VOLUME_LEVEL,
+		Base:     2,
+	}
+
+	speaker.Play(volumeStreamer)
 
 	<-done
 

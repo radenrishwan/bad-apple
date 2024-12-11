@@ -11,7 +11,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
-func RunCLI(fps int, framePath, audioPath string) {
+func RunCLI(fps int, framePath, audioPath string, height, width int) {
 	FRAME_DURATION := int(time.Second) / fps
 
 	screen, err := tcell.NewScreen()
@@ -84,7 +84,7 @@ func RunCLI(fps int, framePath, audioPath string) {
 	for i := 0; i < frameCount; i++ {
 		cycleStart := time.Now()
 
-		frame, err := LoadFrame(framePath+fc[i].Name(), 32, 32)
+		frame, err := LoadFrame(framePath+fc[i].Name(), height, width)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -125,6 +125,7 @@ func scaleFrame(frame [][]uint8, targetWidth, targetHeight int) [][]uint8 {
 	originalHeight := len(frame)
 	originalWidth := len(frame[0])
 
+	// create a new array for the scaled frame
 	scaled := make([][]uint8, targetHeight)
 	for i := range scaled {
 		scaled[i] = make([]uint8, targetWidth)
@@ -152,21 +153,4 @@ func scaleFrame(frame [][]uint8, targetWidth, targetHeight int) [][]uint8 {
 	}
 
 	return scaled
-}
-
-func renderFrame(frame [][]uint8) {
-	// clear the screen and move the cursor to the top left
-	os.Stdout.Write([]byte("\033[H\033[2J"))
-
-	for _, row := range frame {
-		for _, pixel := range row {
-			if pixel == 0 {
-				os.Stdout.Write([]byte(" "))
-			} else {
-				os.Stdout.Write([]byte("█"))
-			}
-		}
-
-		os.Stdout.Write([]byte("\n"))
-	}
 }
